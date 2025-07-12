@@ -23,7 +23,7 @@ def split_by_artist():
 def pivot_table():
     return render_template('pivottable.html')
 
-@app.route('/upload', methods=['POST'])
+@app.route('/upload', methods=['POST'])  # type: ignore
 def upload_file():
     file = request.files.get('file')
     action = request.form.get('action')
@@ -32,7 +32,7 @@ def upload_file():
         flash("Missing file or action.")
         return redirect(url_for('split_by_artist'))
 
-    filename = secure_filename(file.filename)
+    filename = secure_filename(file.filename or 'uploaded_file')
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(file_path)
     base_name = os.path.splitext(filename)[0]
