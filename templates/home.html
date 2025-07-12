@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="text-center mt-5">
+    <h1 id="typing-text" class="display-5 mb-4 special-font"></h1>
+  </div>
+
+  <style>
+    .special-font {
+      font-family: 'Special Elite', monospace;
+      font-size: 2.1rem;
+      color: #fff;
+      letter-spacing: 0.05em;
+      text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+    }
+  </style>
+
+  <script>
+    const text = "An official backend toolset for Slow Down Sounds.";
+    let index = 0;
+    const typing = () => {
+      if (index < text.length) {
+        document.getElementById("typing-text").textContent += text.charAt(index);
+        index++;
+        setTimeout(typing, 60);
+      }
+    };
+    window.onload = typing;
+  </script>
+{% endblock %}

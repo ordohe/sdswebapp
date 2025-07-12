@@ -1,0 +1,40 @@
+<!-- templates/inventory.html -->
+{% extends 'base.html' %}
+
+{% block title %}Inventory Tracker | Slow Down Sounds{% endblock %}
+
+{% block content %}
+  <div class="form-container text-center">
+    <h2 class="mb-4">📦 Inventory Tracker</h2>
+    <p style="color:#ece6e6;">Live view of current physical inventory across formats and SKUs.</p>
+
+    <div class="table-responsive mt-4">
+        <table class="table table-dark table-striped">
+            <thead>
+              <tr>
+                {% for col in columns %}
+                  <th>{{ col }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in data %}
+                <tr>
+                  {% for col in columns %}
+                    <td>{{ row[col] }}</td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>          
+    </div>
+  </div>
+
+  <script>
+    // Optionally make this sortable or searchable
+    document.addEventListener('DOMContentLoaded', function () {
+      const table = document.getElementById('inventoryTable');
+      // You could add DataTables.js here later for full interactivity
+    });
+  </script>
+{% endblock %}
