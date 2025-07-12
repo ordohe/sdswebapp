@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Split by Artist | Slow Down Sounds{% endblock %}
+
 {% block content %}
   <div class="form-container text-center">
     <h2 class="mb-3">🎵 Split Excel by Artist</h2>
@@ -17,6 +18,7 @@
       <div class="mb-3">
         <input class="form-control" type="file" name="file" accept=".xlsx,.csv" required>
       </div>
+      <input type="hidden" name="action" value="split">
       <button class="btn btn-primary w-100" type="submit">Upload & Split</button>
     </form>
 

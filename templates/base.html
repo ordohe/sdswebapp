@@ -91,7 +91,7 @@
       </a>
       <nav class="nav flex-column w-100">
         <a class="nav-link {% if request.endpoint == 'split_by_artist' %}active{% endif %}" href="{{ url_for('split_by_artist') }}">Split by Artist</a>
-        <a class="nav-link {% if request.endpoint == 'inventory' %}active{% endif %}" href="{{ url_for('inventory') }}">Inventory Tracker</a>
+        <a class="nav-link {% if request.endpoint == 'pivot_table' %}active{% endif %}" href="{{ url_for('pivot_table') }}">Pivot Table</a>
       </nav>
     </div>
 

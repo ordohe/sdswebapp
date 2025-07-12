@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, send_file, flash, redirect, url_for
 import os
 import pandas as pd
-import zipfile
 import uuid
 from werkzeug.utils import secure_filename
 
@@ -20,12 +19,17 @@ def home():
 def split_by_artist():
     return render_template('upload.html')
 
+@app.route('/pivot-table')
+def pivot_table():
+    return render_template('pivottable.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    file = request.files['file']
-    if not file:
-        flash("No file uploaded.")
+    file = request.files.get('file')
+    action = request.form.get('action')
+
+    if not file or not action:
+        flash("Missing file or action.")
         return redirect(url_for('split_by_artist'))
 
     filename = secure_filename(file.filename)
@@ -39,7 +43,6 @@ def upload_file():
         else:
             df = pd.read_excel(file_path, header=None)
 
-        # Step 1: Try to detect the correct header row
         header_row_index = None
         for i in range(min(10, len(df))):
             row = df.iloc[i].astype(str).str.lower().str.strip()
@@ -51,50 +54,55 @@ def upload_file():
             flash("Could not find a row containing 'artist' in the first 10 rows.")
             return redirect(url_for('split_by_artist'))
 
-        # Set that row as header
         df.columns = df.iloc[header_row_index]
         df = df.iloc[header_row_index + 1:]
 
-        # Step 2: Try to find the column named 'artist'
-        artist_col = None
-        for col in df.columns:
-            col_str = str(col).strip().lower()
-            if col_str == 'artist':
-                artist_col = col
-                break
-            if df[col].astype(str).str.lower().str.strip().eq('artist').any():
-                artist_col = col
-                break
+        if action == 'split':
+            artist_col = None
+            for col in df.columns:
+                if 'artist' in str(col).strip().lower():
+                    artist_col = col
+                    break
 
-        if not artist_col:
-            flash("Couldn't find a clear 'artist' column in the data.")
-            return redirect(url_for('split_by_artist'))
+            if not artist_col:
+                flash("Couldn't find a clear 'artist' column in the data.")
+                return redirect(url_for('split_by_artist'))
 
-        # Create a single Excel file with one sheet per artist
-        excel_name = f"{secure_filename(base_name)}_split_by_artist.xlsx"
-        excel_path = os.path.join(app.config['OUTPUT_FOLDER'], excel_name)
+            excel_name = f"{secure_filename(base_name)}_split_by_artist.xlsx"
+            excel_path = os.path.join(app.config['OUTPUT_FOLDER'], excel_name)
 
-        with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
-            for artist, group in df.groupby(artist_col):
-                if not str(artist).strip():
-                    continue
-                safe_name = str(artist)[:31].replace('/', '-').replace('\\', '-')  # Excel sheet name limit
-                group.to_excel(writer, sheet_name=safe_name, index=False)
+            with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+                for artist, group in df.groupby(artist_col):
+                    if not str(artist).strip():
+                        continue
+                    safe_name = str(artist)[:31].replace('/', '-').replace('\\', '-')
+                    group.to_excel(writer, sheet_name=safe_name, index=False)
 
-        return send_file(excel_path, as_attachment=True, download_name=excel_name)
+            return send_file(excel_path, as_attachment=True, download_name=excel_name)
+
+        elif action == 'pivot':
+            index_col = request.form.get('index_column')
+            value_col = request.form.get('value_column')
+
+            if not index_col or not value_col:
+                flash("Missing index or value column for pivot table.")
+                return redirect(url_for('pivot_table'))
+
+            df = pd.read_excel(file_path)
+            pivot = pd.pivot_table(df, index=index_col, values=value_col, aggfunc='sum')
+            pivot_filename = f"{os.path.splitext(filename)[0]}_pivot_table.xlsx"
+            pivot_file = os.path.join(app.config['OUTPUT_FOLDER'], pivot_filename)
+
+            pivot.to_excel(pivot_file)
+
+            return send_file(pivot_file, as_attachment=True, download_name=pivot_filename)
+
 
     except Exception as e:
-        flash(f"Error processing file: {str(e)}")   
+        flash(f"Error processing file: {str(e)}")
+        if action == 'pivot':
+            return redirect(url_for('pivot_table'))
         return redirect(url_for('split_by_artist'))
-    
-@app.route('/inventory')
-def inventory():
-    excel_path = os.path.join('data', 'Iconic Physical Production copy.xlsx')
-    df = pd.read_excel(excel_path)
-    data = df.to_dict(orient="records")
-    columns = df.columns.tolist()
-    return render_template('inventory.html', data=data, columns=columns)
-
 
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

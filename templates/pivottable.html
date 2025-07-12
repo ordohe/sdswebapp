@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Pivot Table | Slow Down Sounds{% endblock %}
+{% block content %}
+  <div class="form-container text-center">
+    <h2 class="mb-3">📊 Generate Pivot Table</h2>
+    <p style="color:#ece6e6;">Upload a file and select index/value columns for a pivot summary.</p>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="alert alert-warning" role="alert">
+          {{ messages[0] }}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form action="/upload" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="action" value="pivot">
+      <div class="mb-3">
+        <input class="form-control" type="file" name="file" accept=".xlsx,.csv" required>
+      </div>
+      <div class="mb-3">
+        <input class="form-control" type="text" name="index_column" placeholder="Index column (e.g., Artist)" required>
+      </div>
+      <div class="mb-3">
+        <input class="form-control" type="text" name="value_column" placeholder="Value column (e.g., Quantity)" required>
+      </div>
+      <button class="btn btn-secondary w-100" type="submit">Generate Pivot Table</button>
+    </form>
+  </div>
+{% endblock %}
