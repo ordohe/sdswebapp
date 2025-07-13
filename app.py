@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, send_file, flash, redirect, url_for
 import os
-import pandas as pd
+import csv
 import uuid
 from werkzeug.utils import secure_filename
+from openpyxl import Workbook, load_workbook
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -38,64 +39,81 @@ def upload_file():
     base_name = os.path.splitext(filename)[0]
 
     try:
-        if filename.endswith('.csv'):
-            df = pd.read_csv(file_path, header=None)
-        else:
-            df = pd.read_excel(file_path, header=None)
-
-        header_row_index = None
-        for i in range(min(10, len(df))):
-            row = df.iloc[i].astype(str).str.lower().str.strip()
-            if row.str.contains('artist').any():
-                header_row_index = i
-                break
-
-        if header_row_index is None:
-            flash("Could not find a row containing 'artist' in the first 10 rows.")
-            return redirect(url_for('split_by_artist'))
-
-        df.columns = df.iloc[header_row_index]
-        df = df.iloc[header_row_index + 1:]
-
         if action == 'split':
-            artist_col = None
-            for col in df.columns:
-                if 'artist' in str(col).strip().lower():
-                    artist_col = col
-                    break
+            # Read data and find artist column
+            data = []
+            header_row_index = None
+            artist_col_index = None
+            
+            if filename.endswith('.csv'):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    reader = csv.reader(f)
+                    for i, row in enumerate(reader):
+                        data.append(row)
+                        if i < 10:  # Check first 10 rows for header
+                            for j, cell in enumerate(row):
+                                if 'artist' in str(cell).lower():
+                                    header_row_index = i
+                                    artist_col_index = j
+                                    break
+                        if header_row_index is not None:
+                            break
+            else:
+                wb = load_workbook(file_path, read_only=True)
+                ws = wb.active
+                if ws:
+                    for i, row in enumerate(ws.iter_rows(values_only=True)):
+                        data.append(list(row))
+                        if i < 10:  # Check first 10 rows for header
+                            for j, cell in enumerate(row):
+                                if 'artist' in str(cell).lower():
+                                    header_row_index = i
+                                    artist_col_index = j
+                                    break
+                            if header_row_index is not None:
+                                break
+                wb.close()
 
-            if not artist_col:
-                flash("Couldn't find a clear 'artist' column in the data.")
+            if header_row_index is None or artist_col_index is None:
+                flash("Could not find a row containing 'artist' in the first 10 rows.")
                 return redirect(url_for('split_by_artist'))
 
+            # Group data by artist
+            artist_groups = {}
+            for row in data[header_row_index + 1:]:
+                if len(row) > artist_col_index and row[artist_col_index]:
+                    artist = str(row[artist_col_index]).strip()
+                    if artist:
+                        if artist not in artist_groups:
+                            artist_groups[artist] = []
+                        artist_groups[artist].append(row)
+
+            # Create Excel file with separate sheets for each artist
             excel_name = f"{secure_filename(base_name)}_split_by_artist.xlsx"
             excel_path = os.path.join(app.config['OUTPUT_FOLDER'], excel_name)
-
-            with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
-                for artist, group in df.groupby(artist_col):
-                    if not str(artist).strip():
-                        continue
-                    safe_name = str(artist)[:31].replace('/', '-').replace('\\', '-')
-                    group.to_excel(writer, sheet_name=safe_name, index=False)
-
+            
+            wb = Workbook()
+            if wb.active:
+                wb.remove(wb.active)  # Remove default sheet
+            
+            for artist, rows in artist_groups.items():
+                if not artist.strip():
+                    continue
+                safe_name = artist[:31].replace('/', '-').replace('\\', '-')
+                ws = wb.create_sheet(title=safe_name)
+                
+                # Write header
+                ws.append(data[header_row_index])
+                # Write data
+                for row in rows:
+                    ws.append(row)
+            
+            wb.save(excel_path)
             return send_file(excel_path, as_attachment=True, download_name=excel_name)
 
         elif action == 'pivot':
-            index_col = request.form.get('index_column')
-            value_col = request.form.get('value_column')
-
-            if not index_col or not value_col:
-                flash("Missing index or value column for pivot table.")
-                return redirect(url_for('pivot_table'))
-
-            df = pd.read_excel(file_path)
-            pivot = pd.pivot_table(df, index=index_col, values=value_col, aggfunc='sum')
-            pivot_filename = f"{os.path.splitext(filename)[0]}_pivot_table.xlsx"
-            pivot_file = os.path.join(app.config['OUTPUT_FOLDER'], pivot_filename)
-
-            pivot.to_excel(pivot_file)
-
-            return send_file(pivot_file, as_attachment=True, download_name=pivot_filename)
+            flash("Pivot table functionality temporarily disabled. Please use split by artist.")
+            return redirect(url_for('pivot_table'))
 
 
     except Exception as e:
