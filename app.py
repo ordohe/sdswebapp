@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, send_file, flash, redirect, url_for
+from flask import Flask, render_template, request, send_file, flash, redirect, url_for, session
 import os
 import csv
 import uuid
 from werkzeug.utils import secure_filename
 from openpyxl import Workbook, load_workbook
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -12,19 +13,52 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['OUTPUT_FOLDER'] = 'output'
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB max
 
+# Authentication settings
+ACCESS_CODE = os.environ.get('ACCESS_CODE', 'sds2024')  # Set this in Render environment variables
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'authenticated' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        access_code = request.form.get('access_code')
+        if access_code == ACCESS_CODE:
+            session['authenticated'] = True
+            flash('Successfully logged in!', 'success')
+            return redirect(url_for('home'))
+        else:
+            flash('Invalid access code. Please try again.', 'error')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('authenticated', None)
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('login'))
+
 @app.route('/')
+@login_required
 def home():
     return render_template('home.html')
 
 @app.route('/split-by-artist')
+@login_required
 def split_by_artist():
     return render_template('upload.html')
 
 @app.route('/pivot-table')
+@login_required
 def pivot_table():
     return render_template('pivottable.html')
 
 @app.route('/upload', methods=['POST'])  # type: ignore
+@login_required
 def upload_file():
     file = request.files.get('file')
     action = request.form.get('action')
