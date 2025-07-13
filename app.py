@@ -57,6 +57,60 @@ def split_by_artist():
 def pivot_table():
     return render_template('pivottable.html')
 
+@app.route('/inventory')
+@login_required
+def inventory():
+    # Check if inventory file exists
+    inventory_file = os.path.join(app.config['UPLOAD_FOLDER'], 'inventory.xlsx')
+    if os.path.exists(inventory_file):
+        try:
+            wb = load_workbook(inventory_file)
+            ws = wb.active
+            if not ws:
+                flash("No active worksheet found in inventory file.")
+                return render_template('inventory.html', data=[], columns=[])
+            
+            data = []
+            columns = []
+            
+            for row in ws.iter_rows(values_only=True):
+                if not columns:  # First row is headers
+                    columns = [str(cell) if cell else '' for cell in row]
+                else:
+                    row_data = {}
+                    for i, cell in enumerate(row):
+                        if i < len(columns):
+                            row_data[columns[i]] = str(cell) if cell else ''
+                    data.append(row_data)
+            
+            wb.close()
+            return render_template('inventory.html', data=data, columns=columns)
+        except Exception as e:
+            flash(f"Error reading inventory file: {str(e)}")
+    
+    # If no file exists or error, show empty state
+    return render_template('inventory.html', data=[], columns=[])
+
+@app.route('/upload-inventory', methods=['POST'])
+@login_required
+def upload_inventory():
+    file = request.files.get('file')
+    
+    if not file:
+        flash("No file uploaded.")
+        return redirect(url_for('inventory'))
+    
+    filename = secure_filename(file.filename or 'inventory.xlsx')
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'inventory.xlsx')
+    
+    try:
+        file.save(file_path)
+        flash("Inventory file uploaded successfully!")
+    except Exception as e:
+        flash(f"Error uploading file: {str(e)}")
+    
+    return redirect(url_for('inventory'))
+
 @app.route('/upload', methods=['POST'])  # type: ignore
 @login_required
 def upload_file():

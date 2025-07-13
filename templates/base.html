@@ -12,6 +12,7 @@
       body {
         background-color: #282541;
         color: #fff;
+        font-family: 'Special Elite', monospace;
       }
 
       .sidebar {
@@ -47,7 +48,6 @@
         margin-bottom: 10px;
       }
       .nav-link {
-        font-family: 'Special Elite', monospace;
         font-weight: 500;
         font-size: 1rem;
         color: #222 !important;
@@ -92,6 +92,7 @@
       <nav class="nav flex-column w-100">
         <a class="nav-link {% if request.endpoint == 'split_by_artist' %}active{% endif %}" href="{{ url_for('split_by_artist') }}">Split by Artist</a>
         <a class="nav-link {% if request.endpoint == 'pivot_table' %}active{% endif %}" href="{{ url_for('pivot_table') }}">Pivot Table</a>
+        <a class="nav-link {% if request.endpoint == 'inventory' %}active{% endif %}" href="{{ url_for('inventory') }}">Inventory Tracker</a>
         <hr class="my-3">
         <a class="nav-link text-danger" href="{{ url_for('logout') }}">Logout</a>
       </nav>

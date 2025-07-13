@@ -6,28 +6,67 @@
 {% block content %}
   <div class="form-container text-center">
     <h2 class="mb-4">📦 Inventory Tracker</h2>
-    <p style="color:#ece6e6;">Live view of current physical inventory across formats and SKUs.</p>
+    <p style="color:#ece6e6;">Upload and view current physical inventory across formats and SKUs.</p>
 
-    <div class="table-responsive mt-4">
-        <table class="table table-dark table-striped">
-            <thead>
-              <tr>
-                {% for col in columns %}
-                  <th>{{ col }}</th>
-                {% endfor %}
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in data %}
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="alert alert-info" role="alert">
+          {{ messages[0] }}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Upload Section -->
+    <div class="card bg-dark text-white mb-4" style="border: 1px solid #444;">
+      <div class="card-body">
+        <h5 class="card-title">📤 Upload Inventory File</h5>
+        <p class="card-text">Upload an Excel file (.xlsx) with your inventory data. The first row should contain column headers.</p>
+        <form action="{{ url_for('upload_inventory') }}" method="post" enctype="multipart/form-data">
+          <div class="mb-3">
+            <input class="form-control" type="file" name="file" accept=".xlsx" required>
+          </div>
+          <button class="btn btn-primary" type="submit">Upload Inventory</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Inventory Table -->
+    {% if data and columns %}
+      <div class="card bg-dark text-white" style="border: 1px solid #444;">
+        <div class="card-header">
+          <h5 class="mb-0">📊 Current Inventory</h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-striped mb-0" id="inventoryTable">
+              <thead class="table-dark">
                 <tr>
                   {% for col in columns %}
-                    <td>{{ row[col] }}</td>
+                    <th>{{ col }}</th>
                   {% endfor %}
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>          
-    </div>
+              </thead>
+              <tbody>
+                {% for row in data %}
+                  <tr>
+                    {% for col in columns %}
+                      <td>{{ row[col] }}</td>
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="card bg-dark text-white" style="border: 1px solid #444;">
+        <div class="card-body text-center">
+          <h5>No inventory data found</h5>
+          <p>Upload an Excel file to get started with inventory tracking.</p>
+        </div>
+      </div>
+    {% endif %}
   </div>
 
   <script>
