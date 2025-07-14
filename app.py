@@ -60,8 +60,8 @@ def pivot_table():
 @app.route('/inventory')
 @login_required
 def inventory():
-    # Check if inventory file exists
-    inventory_file = os.path.join(app.config['UPLOAD_FOLDER'], 'inventory.xlsx')
+    # Use slowdownsoundsstock.xlsx as the inventory file
+    inventory_file = os.path.join(app.config['UPLOAD_FOLDER'], 'slowdownsoundsstock.xlsx')
     if os.path.exists(inventory_file):
         try:
             wb = load_workbook(inventory_file)
@@ -100,8 +100,8 @@ def upload_inventory():
         flash("No file uploaded.")
         return redirect(url_for('inventory'))
     
-    filename = secure_filename(file.filename or 'inventory.xlsx')
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'inventory.xlsx')
+    # Always save as slowdownsoundsstock.xlsx
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'slowdownsoundsstock.xlsx')
     
     try:
         file.save(file_path)
