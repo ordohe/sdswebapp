@@ -57,11 +57,42 @@ def split_by_artist():
 def pivot_table():
     return render_template('pivottable.html')
 
-@app.route('/inventory')
+@app.route('/inventory', methods=['GET', 'POST'])
 @login_required
 def inventory():
-    # Use slowdownsoundsstock.xlsx as the inventory file
     inventory_file = os.path.join(app.config['UPLOAD_FOLDER'], 'slowdownsoundsstock.xlsx')
+    data = []
+    columns = []
+
+    if request.method == 'POST':
+        # Save the edited inventory
+        try:
+            # Get columns from the form
+            columns = request.form.getlist('columns')
+            # Get number of rows
+            num_rows = int(request.form.get('num_rows', 0))
+            # Build new data
+            new_data = []
+            for i in range(num_rows):
+                row = []
+                for col in columns:
+                    row.append(request.form.get(f'cell_{i}_{col}', ''))
+                new_data.append(row)
+            # Write to Excel
+            wb = Workbook()
+            ws = wb.active
+            if ws is None:
+                ws = wb.create_sheet()
+            ws.append(columns)
+            for row in new_data:
+                ws.append(row)
+            wb.save(inventory_file)
+            wb.close()
+            flash('Inventory updated successfully!')
+        except Exception as e:
+            flash(f'Error saving inventory: {str(e)}')
+
+    # Always read the latest data
     if os.path.exists(inventory_file):
         try:
             wb = load_workbook(inventory_file)
@@ -69,12 +100,8 @@ def inventory():
             if not ws:
                 flash("No active worksheet found in inventory file.")
                 return render_template('inventory.html', data=[], columns=[])
-            
-            data = []
-            columns = []
-            
             for row in ws.iter_rows(values_only=True):
-                if not columns:  # First row is headers
+                if not columns:
                     columns = [str(cell) if cell else '' for cell in row]
                 else:
                     row_data = {}
@@ -82,14 +109,10 @@ def inventory():
                         if i < len(columns):
                             row_data[columns[i]] = str(cell) if cell else ''
                     data.append(row_data)
-            
             wb.close()
-            return render_template('inventory.html', data=data, columns=columns)
         except Exception as e:
             flash(f"Error reading inventory file: {str(e)}")
-    
-    # If no file exists or error, show empty state
-    return render_template('inventory.html', data=[], columns=[])
+    return render_template('inventory.html', data=data, columns=columns)
 
 @app.route('/upload-inventory', methods=['POST'])
 @login_required

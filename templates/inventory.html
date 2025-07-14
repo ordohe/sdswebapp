@@ -6,7 +6,7 @@
 {% block content %}
   <div class="form-container text-center">
     <h2 class="mb-4">📦 Inventory Tracker</h2>
-    <p style="color:#ece6e6;">Upload and view current physical inventory across formats and SKUs.</p>
+    <p style="color:#ece6e6;">Upload and edit current physical inventory across formats and SKUs.</p>
 
     {% with messages = get_flashed_messages() %}
       {% if messages %}
@@ -30,35 +30,55 @@
       </div>
     </div>
 
-    <!-- Inventory Table -->
+    <!-- Editable Inventory Table -->
     {% if data and columns %}
-      <div class="card bg-dark text-white" style="border: 1px solid #444;">
-        <div class="card-header">
-          <h5 class="mb-0">📊 Current Inventory</h5>
-        </div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-dark table-striped mb-0" id="inventoryTable">
-              <thead class="table-dark">
-                <tr>
-                  {% for col in columns %}
-                    <th>{{ col }}</th>
-                  {% endfor %}
-                </tr>
-              </thead>
-              <tbody>
-                {% for row in data %}
+      <form method="POST" action="{{ url_for('inventory') }}">
+        <input type="hidden" name="num_rows" value="{{ data|length }}">
+        {% for col in columns %}
+          <input type="hidden" name="columns" value="{{ col }}">
+        {% endfor %}
+        <div class="card bg-dark text-white" style="border: 1px solid #444;">
+          <div class="card-header">
+            <h5 class="mb-0">📊 Edit Inventory</h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-dark table-striped mb-0" id="inventoryTable">
+                <thead class="table-dark">
                   <tr>
                     {% for col in columns %}
-                      <td>{{ row[col] }}</td>
+                      <th>{{ col }}</th>
                     {% endfor %}
                   </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {% for row in data %}
+                    <tr>
+                      {% for col in columns %}
+                        {% set is_quantity = col|lower == 'quantity' %}
+                        {% set value = row[col] %}
+                        {% if is_quantity %}
+                          {% set num = value|int(0) %}
+                          <td style="background-color: {% if num <= 10 %}#fff3cd{% else %}#d4edda{% endif %}; color: #222;">
+                            <input type="number" class="form-control form-control-sm" name="cell_{{ loop.parent.loop.index0 }}_{{ col }}" value="{{ value }}" style="background: transparent; border: none; width: 80px; text-align: center; color: #222;">
+                          </td>
+                        {% else %}
+                          <td>
+                            <input type="text" class="form-control form-control-sm" name="cell_{{ loop.parent.loop.index0 }}_{{ col }}" value="{{ value }}" style="background: transparent; border: none; color: #fff;">
+                          </td>
+                        {% endif %}
+                      {% endfor %}
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <button type="submit" class="btn btn-success">Save Changes</button>
           </div>
         </div>
-      </div>
+      </form>
     {% else %}
       <div class="card bg-dark text-white" style="border: 1px solid #444;">
         <div class="card-body text-center">
@@ -68,12 +88,4 @@
       </div>
     {% endif %}
   </div>
-
-  <script>
-    // Optionally make this sortable or searchable
-    document.addEventListener('DOMContentLoaded', function () {
-      const table = document.getElementById('inventoryTable');
-      // You could add DataTables.js here later for full interactivity
-    });
-  </script>
 {% endblock %}
